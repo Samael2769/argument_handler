@@ -16,6 +16,7 @@ SRC_FILES	=\
 SRC_FILES_MAIN	=	main.c\
 					arg_handler.c\
 					make_tab.c\
+					sm_strtoarr.c\
 
 TEST_FILES	=\
 

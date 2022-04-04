@@ -10,48 +10,140 @@
 #include <stdlib.h>
 #include "arg_handler.h"
 
-//char ** make_tab(char * arg_string)
-//{
-//    char **tab = malloc(sizeof(char *) * 1);
-//    int i = 0;
-//    int a = 0;
-//    int b = 0;
-//
-//    for (i = 0; arg_string[i] != ' ' && arg_string[i] != '\0'; ++i);
-//    if (arg_string[i] != ' ') {
-//        return NULL;
-//    }
-//    ++i;
-//    for (; i < strlen(arg_string); ++i, ++a) {
-//        if (arg_string[i] == ' ' && (arg_string[i -3] && arg_string[i - 3] != '(')) {
-//            printf("arg_string[i] = %c\n", arg_string[i]);
-//            printf("%d - %s\n", b, tab[b]);
-//            printf("a = %d\n", a);
-//            ++b;
-//            a = 0;
-//            tab = realloc(tab, sizeof(char * ) * (b + 1));
-//            continue;
-//        }
-//        tab[b] = realloc(tab[b], sizeof(char) * (a + 1));
-//        tab[b][a] = arg_string[i];
-//        printf("%c - %c\n", tab[b][a], arg_string[i]);
-//    }
-//    printf("b = %d\n", b);
-//    tab[b + 1] = NULL;
-//    return tab;
-//}
 
-node_args_t * create_head(char *str)
+
+/*
+    type 1 = -x // movable
+    type 2 = alpha // static
+*/
+
+//delete '[]()' from str 
+char *epurator(char *str)
 {
-    node_args_t *node = malloc(sizeof(node_args_t));
+    int i = 0;
+    int j = 0;
+    char *new_str = malloc(sizeof(char) * (strlen(str) + 1));
+    while (str[i] != '\0') {
+        if (str[i] != '[' && str[i] != ']' && str[i] != '(' && str[i] != ')') {
+            new_str[j] = str[i];
+            j++;
+        }
+        i++;
+    }
+    new_str[j] = '\0';
+    return new_str;
+}
 
-    
+void create_head(args_list *list, char *str)
+{
+    node_args_t *new = malloc(sizeof(node_args_t));
+    char **tab = sm_strtoarr(str, ' ');
+    switch (tab[0][0]) {
+        case '-':
+            new->type = 1;
+            new->is_mandatory = true;
+            new->head = epurator(tab[0]);
+            new->arg = NULL;
+            new->isPlaced = false;
+            new->place = -1;
+            break;
+        case '(':
+            new->type = 1;
+            if (tab[1][0] == '[')
+                new->is_mandatory = false;
+            else
+                new->is_mandatory = true;
+            new->head = epurator(tab[0]);
+            new->arg = epurator(tab[1]);
+            new->isPlaced = false;
+            new->place = -1;
+            break;
+        case '[':
+            if (tab[0][0] == '-') {
+                new->head = epurator(tab[0]);
+                new->arg = NULL;
+                new->type = 1;
+                new->isPlaced = false;
+                new->place = -1;
+            } else {
+                new->head = NULL;
+                new->arg = epurator(tab[0]);
+                new->type = 2;
+                new->isPlaced = true;
+                new->place = list->placeNb + 1;
+                list->placeNb++;
+            }
+            new->is_mandatory = false;
+            break;
+        default:
+            new->head = NULL;
+            new->arg = epurator(tab[0]);
+            new->type = 2;
+            new->isPlaced = true;
+            new->place = list->placeNb + 1;
+            list->placeNb++;
+            new->is_mandatory = true;
+            break;
+    }
+    new->next = NULL;
+    list->head = new;
 }
 
 //parse the string and create a linked list
-void push_new(node_args_t *head, char *str)
+void push_new(args_list *list, char *str)
 {
-    
+    node_args_t *new = malloc(sizeof(node_args_t));
+    char **tab = sm_strtoarr(str, ' ');
+    switch (tab[0][0]) {
+        case '-':
+            new->type = 1;
+            new->is_mandatory = true;
+            new->head = epurator(tab[0]);
+            new->arg = NULL;
+            new->isPlaced = false;
+            new->place = -1;
+            break;
+        case '(':
+            new->type = 1;
+            if (tab[1][0] == '[')
+                new->is_mandatory = false;
+            else
+                new->is_mandatory = true;
+            new->head = epurator(tab[0]);
+            new->arg = epurator(tab[1]);
+            new->isPlaced = false;
+            new->place = -1;
+            break;
+        case '[':
+            if (tab[0][0] == '-') {
+                new->head = epurator(tab[0]);
+                new->arg = NULL;
+                new->type = 1;
+                new->isPlaced = false;
+                new->place = -1;
+            } else {
+                new->head = NULL;
+                new->arg = epurator(tab[0]);
+                new->type = 2;
+                new->isPlaced = true;
+                new->place = list->placeNb + 1;
+                list->placeNb++;
+            }
+            new->is_mandatory = false;
+            break;
+        default:
+            new->head = NULL;
+            new->arg = epurator(tab[0]);
+            new->type = 2;
+            new->isPlaced = true;
+            new->place = list->placeNb + 1;
+            list->placeNb++;
+            new->is_mandatory = true;
+            break;
+    }
+    node_args_t *dup;
+    for (dup = list->head; dup->next != NULL; dup = dup->next);
+    dup->next = new;
 }
 
 int make_list(args_list *list, char * arg_string)
@@ -59,15 +151,31 @@ int make_list(args_list *list, char * arg_string)
     char **arg_tab = make_tab(arg_string, ' ');
     if (arg_tab == NULL)
         return -1;
-    for (int i = 0; arg_tab[i] != NULL; ++i)
-        printf("%s\n", arg_tab[i]);
+    for (int i = 1; arg_tab[i] != NULL; ++i) {
+        if (i == 1)
+            create_head(list, arg_tab[i]);
+        else
+            push_new(list, arg_tab[i]);
+        list->nb += 1;
+    }
 }
 
 int arg_handler(char * arg_string, int ac, char **av)
 {
     printf("%s\n", arg_string);
-    args_list list = {NULL, 0};
+    args_list list = {NULL, 0, 0};
     if (make_list(&list, arg_string) != 0)
         return 0;
+    for (node_args_t *dup = list.head; dup != NULL; dup = dup->next) {
+        if (dup->head != NULL)
+            printf("head : %s\n", dup->head);
+        if (dup->arg != NULL)
+            printf("arg : %s\n", dup->arg);
+        printf("type : %d\n", dup->type);
+        printf("is_mandatory : %d\n", dup->is_mandatory);
+        printf("isPlaced : %d\n", dup->isPlaced);
+        printf("place : %d\n", dup->place);
+        printf("\n");
+    }
     return 0;
 }
