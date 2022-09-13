@@ -49,12 +49,15 @@ void create_head(args_list *list, char *str)
             break;
         case '(':
             new->type = 1;
-            if (tab[1][0] == '[')
-                new->is_mandatory = false;
-            else
-                new->is_mandatory = true;
+            if (tab[1][0] == '[') {
+                new->is_arg_mandatory = false;
+                new->arg = NULL;
+            } else {
+                new->is_arg_mandatory = true;
+                new->arg = epurator(tab[1]);
+            }
+            new->is_mandatory = true;
             new->head = epurator(tab[0]);
-            new->arg = epurator(tab[1]);
             new->isPlaced = false;
             new->place = -1;
             break;
@@ -105,12 +108,15 @@ void push_new(args_list *list, char *str)
             break;
         case '(':
             new->type = 1;
-            if (tab[1][0] == '[')
-                new->is_mandatory = false;
-            else
-                new->is_mandatory = true;
+            if (tab[1][0] == '[') {
+                new->is_arg_mandatory = false;
+                new->arg = NULL;
+            } else {
+                new->is_arg_mandatory = true;
+                new->arg = epurator(tab[1]);
+            }
+            new->is_mandatory = true;
             new->head = epurator(tab[0]);
-            new->arg = epurator(tab[1]);
             new->isPlaced = false;
             new->place = -1;
             break;
@@ -142,6 +148,7 @@ void push_new(args_list *list, char *str)
             break;
     }
     node_args_t *dup;
+    new->isGood = false;
     for (dup = list->head; dup->next != NULL; dup = dup->next);
     dup->next = new;
 }
@@ -166,16 +173,46 @@ int arg_handler(char * arg_string, int ac, char **av)
     args_list list = {NULL, 0, 0};
     if (make_list(&list, arg_string) != 0)
         return 0;
+    for (int i = 1; i < ac; ++i) {
+        if (av[i][0] == '-') {
+            for (node_args_t *dup = list.head; dup != NULL; dup = dup->next) {
+                if (dup->head != NULL && strncmp(av[i], dup->head, 2) == 0) {
+                    dup->isGood = true;
+                    if (dup->arg != NULL) {
+                        if (i + 1 < ac)
+                            i++;
+                        else
+                            dup->isGood = false;
+                    } else
+                        dup->isGood = true;
+                    break;
+                }
+            }
+        } else {
+            for (node_args_t *dup = list.head; dup != NULL; dup = dup->next) {
+                if (dup->isPlaced == true) {
+                    dup->isPlaced = false;
+                    dup->isGood = true;
+                    break;
+                }
+            }
+        }
+    }
+    //for (node_args_t *dup = list.head; dup != NULL; dup = dup->next) {
+    //    if (dup->head != NULL)
+    //        printf("head : %s\n", dup->head);
+    //    if (dup->arg != NULL)
+    //        printf("arg : %s\n", dup->arg);
+    //    printf("type : %d\n", dup->type);
+    //    printf("is_mandatory : %d\n", dup->is_mandatory);
+    //    printf("isPlaced : %d\n", dup->isPlaced);
+    //    printf("place : %d\n", dup->place);
+    //    printf("isGood : %d\n", dup->isGood);
+    //    printf("\n");
+    //}
     for (node_args_t *dup = list.head; dup != NULL; dup = dup->next) {
-        if (dup->head != NULL)
-            printf("head : %s\n", dup->head);
-        if (dup->arg != NULL)
-            printf("arg : %s\n", dup->arg);
-        printf("type : %d\n", dup->type);
-        printf("is_mandatory : %d\n", dup->is_mandatory);
-        printf("isPlaced : %d\n", dup->isPlaced);
-        printf("place : %d\n", dup->place);
-        printf("\n");
+        if (dup->is_mandatory == true && dup->isGood == false)
+            return 1;
     }
     return 0;
 }

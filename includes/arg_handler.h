@@ -16,8 +16,10 @@ typedef struct node_args_s {
     int place;
     bool isPlaced;
     bool is_mandatory;
+    bool is_arg_mandatory;
     int type;
     struct node_args_s * next;
+    bool isGood;
 } node_args_t;
 
 typedef struct args_list_s {
